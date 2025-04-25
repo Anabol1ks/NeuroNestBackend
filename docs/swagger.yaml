@@ -1,0 +1,174 @@
+definitions:
+  handlers.LoginInput:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: yi29jksA
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  handlers.RegisterInput:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      nickname:
+        example: user123
+        type: string
+      password:
+        example: yi29jksA
+        type: string
+    required:
+    - email
+    - nickname
+    - password
+    type: object
+  response.ErrorResponse:
+    properties:
+      code:
+        type: string
+      details:
+        type: string
+      message:
+        type: string
+    type: object
+  response.SuccessResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  response.TokenResponse:
+    properties:
+      access_token:
+        example: eyJhbGciOiJI...
+        type: string
+      refresh_token:
+        example: eyJhbGciOi...
+        type: string
+    type: object
+info:
+  contact: {}
+  title: '---'
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Авторизация пользователя и получение токенов
+      parameters:
+      - description: Данные для авторизации
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LoginInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешная авторизация
+          schema:
+            $ref: '#/definitions/response.TokenResponse'
+        "400":
+          description: Ошибка валидации данных (VALIDATION_ERROR)
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Неверный email или пароль (INVALID_CREDENTIALS)
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Ошибка сервера (TOKEN_GENERATION_ERROR)
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Авторизация пользователя
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Регистрация нового пользователя
+      parameters:
+      - description: Данные пользователя
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RegisterInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Пользователь успешно зарегистрирован
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Ошибка валидации (VALIDATION_ERROR) или пользователь уже существует
+            (EMAIL_EXISTS)
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Ошибка сервера (PASSWORD_HASH_ERROR, DB_ERROR)
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Регистрация пользователя
+      tags:
+      - auth
+  /auth/yandex/callback:
+    get:
+      consumes:
+      - application/json
+      description: Обрабатывает callback от Yandex OAuth, получает токены и данные
+        пользователя
+      parameters:
+      - description: Код авторизации от Yandex
+        in: query
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешная авторизация
+          schema:
+            $ref: '#/definitions/response.TokenResponse'
+        "400":
+          description: Ошибка валидации (OAUTH_ERROR)
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Ошибка сервера (OAUTH_ERROR, DB_ERROR, TOKEN_GENERATION_ERROR)
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Callback от Yandex OAuth
+      tags:
+      - auth
+  /auth/yandex/login:
+    get:
+      consumes:
+      - application/json
+      description: Перенаправляет пользователя на страницу авторизации Yandex
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Редирект на страницу авторизации Yandex
+        "500":
+          description: Ошибка сервера
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Редирект на Yandex OAuth
+      tags:
+      - auth
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

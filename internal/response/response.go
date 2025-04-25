@@ -9,3 +9,8 @@ type ErrorResponse struct {
 	Code    string `json:"code"`
 	Details string `json:"details,omitempty"`
 }
+
+type TokenResponse struct {
+	AccessToken  string `json:"access_token" example:"eyJhbGciOiJI..."`
+	RefreshToken string `json:"refresh_token" example:"eyJhbGciOi..."`
+}

@@ -1,12 +1,17 @@
 package main
 
 import (
+	_ "NeuroNest/docs"
 	"NeuroNest/internal/config"
 	"NeuroNest/internal/db"
 	"NeuroNest/internal/router"
 	"log"
 )
 
+// @Title						---
+// @securityDefinitions.apikey	BearerAuth
+// @in							header
+// @name						Authorization
 func main() {
 	config.LoadEnv()
 
