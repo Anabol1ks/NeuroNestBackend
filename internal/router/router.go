@@ -1,6 +1,7 @@
 package router
 
 import (
+	"NeuroNest/internal/auth"
 	"NeuroNest/internal/handlers"
 
 	"github.com/gin-contrib/cors"
@@ -22,6 +23,10 @@ func RouterConfig() *gin.Engine {
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
+	profileGroup := r.Group("/profile", auth.AuthMiddleware())
+	{
+		profileGroup.GET("/get", handlers.GetProfileHandler)
+	}
 	authGroup := r.Group("/auth")
 	{
 		authGroup.GET("/yandex/login", handlers.YandexLoginHandler)

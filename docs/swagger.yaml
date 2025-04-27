@@ -36,6 +36,20 @@ definitions:
       message:
         type: string
     type: object
+  response.ProfileResponse:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      nickname:
+        type: string
+      profile_pic:
+        description: Ссылка на фото профиля
+        type: string
+    type: object
   response.SuccessResponse:
     properties:
       message:
@@ -166,6 +180,27 @@ paths:
       summary: Редирект на Yandex OAuth
       tags:
       - auth
+  /profile/get:
+    get:
+      consumes:
+      - application/json
+      description: Получает информацию о пользователе по его ID
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Информация о профиле пользователя
+          schema:
+            $ref: '#/definitions/response.ProfileResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Получение информации о профиле
+      tags:
+      - profile
 securityDefinitions:
   BearerAuth:
     in: header

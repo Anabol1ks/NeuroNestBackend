@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -145,9 +146,7 @@ func YandexCallbackHandler(c *gin.Context) {
 		})
 		return
 	}
-
-	c.JSON(http.StatusOK, response.TokenResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-	})
+	frontendURL := os.Getenv("FRONT_URL")
+	redirectURL := fmt.Sprintf("%s/auth/callback?access_token=%s&refresh_token=%s", frontendURL, accessToken, refreshToken)
+	c.Redirect(http.StatusFound, redirectURL)
 }
