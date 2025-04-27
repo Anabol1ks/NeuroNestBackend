@@ -27,6 +27,17 @@ definitions:
     - nickname
     - password
     type: object
+  handlers.UpdateProfileInput:
+    properties:
+      first_name:
+        type: string
+      last_name:
+        type: string
+      nickname:
+        type: string
+      profile_pic:
+        type: string
+    type: object
   response.ErrorResponse:
     properties:
       code:
@@ -199,6 +210,38 @@ paths:
       security:
       - BearerAuth: []
       summary: Получение информации о профиле
+      tags:
+      - profile
+  /profile/update:
+    put:
+      consumes:
+      - application/json
+      description: Обновляет информацию профиля пользователя (кроме email)
+      parameters:
+      - description: Данные для обновления профиля
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateProfileInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Профиль успешно обновлен
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Ошибка валидации данных
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Обновление информации профиля
       tags:
       - profile
 securityDefinitions:

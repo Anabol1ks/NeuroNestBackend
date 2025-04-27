@@ -26,6 +26,7 @@ func RouterConfig() *gin.Engine {
 	profileGroup := r.Group("/profile", auth.AuthMiddleware())
 	{
 		profileGroup.GET("/get", handlers.GetProfileHandler)
+		profileGroup.PUT("/update", handlers.UpdateProfileHandler)
 	}
 	authGroup := r.Group("/auth")
 	{

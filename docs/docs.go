@@ -216,6 +216,57 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/profile/update": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Обновляет информацию профиля пользователя (кроме email)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "profile"
+                ],
+                "summary": "Обновление информации профиля",
+                "parameters": [
+                    {
+                        "description": "Данные для обновления профиля",
+                        "name": "profile",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UpdateProfileInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Профиль успешно обновлен",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка валидации данных",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Пользователь не найден",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -255,6 +306,23 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "example": "yi29jksA"
+                }
+            }
+        },
+        "handlers.UpdateProfileInput": {
+            "type": "object",
+            "properties": {
+                "first_name": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "nickname": {
+                    "type": "string"
+                },
+                "profile_pic": {
+                    "type": "string"
                 }
             }
         },
