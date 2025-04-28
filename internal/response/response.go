@@ -22,3 +22,8 @@ type ProfileResponse struct {
 	LastName   string `json:"last_name,omitempty"`
 	ProfilePic string `json:"profile_pic,omitempty"` // Ссылка на фото профиля
 }
+
+type UploadAvatarResponse struct {
+	Message    string `json:"message"`
+	ProfilePic string `json:"profile_pic"`
+}

@@ -183,6 +183,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/profile/delete-avatar": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Удаляет аватарку пользователя с сервера и очищает ссылку в базе данных.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "profile"
+                ],
+                "summary": "Удаление аватарки пользователя",
+                "responses": {
+                    "200": {
+                        "description": "Аватарка успешно удалена",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Аватарка не найдена",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/profile/get": {
             "get": {
                 "security": [
@@ -261,6 +301,61 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Пользователь не найден",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/profile/upload-avatar": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Позволяет пользователю загрузить аватарку. Поддерживаются форматы PNG, JPG, JPEG. Максимальный размер файла — 2MB.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "profile"
+                ],
+                "summary": "Загрузка аватарки пользователя",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Аватарка пользователя",
+                        "name": "avatar",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Файл успешно загружен",
+                        "schema": {
+                            "$ref": "#/definitions/response.UploadAvatarResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка валидации (например, файл слишком большой или неподдерживаемый формат)",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Пользователь не найден CODE: USER_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера (например, ошибка сохранения файла или базы данных)",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorResponse"
                         }
@@ -379,6 +474,17 @@ const docTemplate = `{
                 "refresh_token": {
                     "type": "string",
                     "example": "eyJhbGciOi..."
+                }
+            }
+        },
+        "response.UploadAvatarResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "profile_pic": {
+                    "type": "string"
                 }
             }
         }

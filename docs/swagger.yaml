@@ -75,6 +75,13 @@ definitions:
         example: eyJhbGciOi...
         type: string
     type: object
+  response.UploadAvatarResponse:
+    properties:
+      message:
+        type: string
+      profile_pic:
+        type: string
+    type: object
 info:
   contact: {}
   title: '---'
@@ -191,6 +198,32 @@ paths:
       summary: Редирект на Yandex OAuth
       tags:
       - auth
+  /profile/delete-avatar:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет аватарку пользователя с сервера и очищает ссылку в базе
+        данных.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Аватарка успешно удалена
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "404":
+          description: Аватарка не найдена
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Ошибка сервера
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Удаление аватарки пользователя
+      tags:
+      - profile
   /profile/get:
     get:
       consumes:
@@ -242,6 +275,44 @@ paths:
       security:
       - BearerAuth: []
       summary: Обновление информации профиля
+      tags:
+      - profile
+  /profile/upload-avatar:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Позволяет пользователю загрузить аватарку. Поддерживаются форматы
+        PNG, JPG, JPEG. Максимальный размер файла — 2MB.
+      parameters:
+      - description: Аватарка пользователя
+        in: formData
+        name: avatar
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Файл успешно загружен
+          schema:
+            $ref: '#/definitions/response.UploadAvatarResponse'
+        "400":
+          description: Ошибка валидации (например, файл слишком большой или неподдерживаемый
+            формат)
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: 'Пользователь не найден CODE: USER_NOT_FOUND'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Ошибка сервера (например, ошибка сохранения файла или базы
+            данных)
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Загрузка аватарки пользователя
       tags:
       - profile
 securityDefinitions:

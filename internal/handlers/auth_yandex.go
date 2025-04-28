@@ -5,6 +5,8 @@ import (
 	"NeuroNest/internal/db"
 	"NeuroNest/internal/models"
 	"NeuroNest/internal/response"
+	"NeuroNest/internal/storage"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -13,6 +15,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type YandexUser struct {
@@ -108,17 +111,20 @@ func YandexCallbackHandler(c *gin.Context) {
 
 	avatarUrl := fmt.Sprintf("https://avatars.yandex.net/get-yapic/%s/islands-200", yandexUser.Avatar)
 
-	// Check if user exists
 	var user models.User
 	if err := db.DB.Where("yandex_id = ?", yandexUser.ID).First(&user).Error; err != nil {
-		// Register new user
+		localURL, err := fetchAndStoreAvatar(c, avatarUrl, user.ID)
+		if err != nil {
+			// логируем, но не финишим: сохраняем внешний URL как fallback
+			localURL = avatarUrl
+		}
 		user = models.User{
 			Nickname:   yandexUser.FirstName,
 			Email:      yandexUser.Email,
 			YandexID:   &yandexUser.ID,
 			FirstName:  yandexUser.FirstName,
 			LastName:   yandexUser.LastName,
-			ProfilePic: avatarUrl,
+			ProfilePic: localURL,
 		}
 		if err := db.DB.Create(&user).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, response.ErrorResponse{
@@ -126,6 +132,30 @@ func YandexCallbackHandler(c *gin.Context) {
 				Message: "Ошибка при создании пользователя",
 			})
 			return
+		}
+	} else {
+		updated := false
+		if user.FirstName != yandexUser.FirstName {
+			user.FirstName = yandexUser.FirstName
+			updated = true
+		}
+		if user.LastName != yandexUser.LastName {
+			user.LastName = yandexUser.LastName
+			updated = true
+		}
+		if user.Email != yandexUser.Email {
+			user.Email = yandexUser.Email
+			updated = true
+		}
+
+		if updated {
+			if err := db.DB.Save(&user).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, response.ErrorResponse{
+					Code:    "DB_ERROR",
+					Message: "Ошибка при обновлении данных пользователя",
+				})
+				return
+			}
 		}
 	}
 
@@ -149,4 +179,22 @@ func YandexCallbackHandler(c *gin.Context) {
 	frontendURL := os.Getenv("FRONT_URL")
 	redirectURL := fmt.Sprintf("%s/auth/callback?access_token=%s&refresh_token=%s", frontendURL, accessToken, refreshToken)
 	c.Redirect(http.StatusFound, redirectURL)
+}
+
+func fetchAndStoreAvatar(ctx context.Context, avatarURL string, userID uint) (string, error) {
+	resp, err := http.Get(avatarURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	avatarSvc := storage.NewLocalAvatarService(
+		config.UploadsPath,        // "./uploads/avatars"
+		config.BaseURL+"/avatars", // e.g. "http://localhost:8080/avatars"
+	)
+
+	// можно проверить Content-Type
+	ext := ".jpg" // или парсить из URL/заголовков
+	filename := fmt.Sprintf("%d_%s%s", userID, uuid.New().String(), ext)
+	return avatarSvc.Save(resp.Body, filename)
 }

@@ -11,6 +11,8 @@ var (
 	YandexClientID     string
 	YandexClientSecret string
 	YandexRedirectURL  string
+	UploadsPath        string
+	BaseURL            string
 )
 
 func LoadEnv() {
@@ -20,4 +22,6 @@ func LoadEnv() {
 	YandexClientID = os.Getenv("YANDEX_CLIENT_ID")
 	YandexClientSecret = os.Getenv("YANDEX_CLIENT_SECRET")
 	YandexRedirectURL = os.Getenv("YANDEX_REDIRECT_URL")
+	UploadsPath = os.Getenv("UPLOADS_PATH")
+	BaseURL = os.Getenv("BASE_URL")
 }
