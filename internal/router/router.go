@@ -39,6 +39,7 @@ func RouterConfig() *gin.Engine {
 		authGroup.GET("/yandex/callback", handlers.YandexCallbackHandler)
 		authGroup.POST("/register", handlers.RegisterHandler)
 		authGroup.POST("/login", handlers.LoginHandler)
+		authGroup.POST("/refresh", handlers.RefreshToken)
 	}
 	return r
 }

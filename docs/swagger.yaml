@@ -11,6 +11,13 @@ definitions:
     - email
     - password
     type: object
+  handlers.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
   handlers.RegisterInput:
     properties:
       email:
@@ -118,6 +125,41 @@ paths:
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       summary: Авторизация пользователя
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Обновление access токена с помощью refresh токена
+      parameters:
+      - description: Refresh токен
+        in: body
+        name: refresh_token
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешное обновление access токена
+          schema:
+            $ref: '#/definitions/response.TokenResponse'
+        "400":
+          description: Ошибка валидации данных (VALIDATION_ERROR)
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Неверный или просроченный refresh токен (INVALID_REFRESH_TOKEN)
+            или пользователь не найден (USER_NOT_FOUND)
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Ошибка сервера (TOKEN_GENERATION_ERROR)
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Обновление access токена
       tags:
       - auth
   /auth/register:

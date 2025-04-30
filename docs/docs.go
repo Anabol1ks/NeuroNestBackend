@@ -67,6 +67,58 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/refresh": {
+            "post": {
+                "description": "Обновление access токена с помощью refresh токена",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Обновление access токена",
+                "parameters": [
+                    {
+                        "description": "Refresh токен",
+                        "name": "refresh_token",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RefreshTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешное обновление access токена",
+                        "schema": {
+                            "$ref": "#/definitions/response.TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка валидации данных (VALIDATION_ERROR)",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Неверный или просроченный refresh токен (INVALID_REFRESH_TOKEN) или пользователь не найден (USER_NOT_FOUND)",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера (TOKEN_GENERATION_ERROR)",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/register": {
             "post": {
                 "description": "Регистрация нового пользователя",
@@ -379,6 +431,17 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "example": "yi29jksA"
+                }
+            }
+        },
+        "handlers.RefreshTokenRequest": {
+            "type": "object",
+            "required": [
+                "refresh_token"
+            ],
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
                 }
             }
         },

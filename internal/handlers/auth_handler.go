@@ -161,3 +161,93 @@ func generateToken(userID uint, duration time.Duration, secret []byte) (string, 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(secret)
 }
+
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
+// @Summary		Обновление access токена
+// @Description	Обновление access токена с помощью refresh токена
+// @Tags			auth
+// @Accept			json
+// @Produce		json
+// @Param			refresh_token	body		RefreshTokenRequest		true	"Refresh токен"
+// @Success		200				{object}	response.TokenResponse	"Успешное обновление access токена"
+// @Failure		400				{object}	response.ErrorResponse	"Ошибка валидации данных (VALIDATION_ERROR)"
+// @Failure		401				{object}	response.ErrorResponse	"Неверный или просроченный refresh токен (INVALID_REFRESH_TOKEN) или пользователь не найден (USER_NOT_FOUND)"
+// @Failure		500				{object}	response.ErrorResponse	"Ошибка сервера (TOKEN_GENERATION_ERROR)"
+// @Router			/auth/refresh [post]
+func RefreshToken(c *gin.Context) {
+	var req RefreshTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, response.ErrorResponse{
+			Code:    "VALIDATION_ERROR",
+			Message: "Ошибка валидации данных",
+			Details: err.Error(),
+		})
+		return
+	}
+
+	token, err := jwt.Parse(req.RefreshToken, func(token *jwt.Token) (interface{}, error) {
+		return refreshSecret, nil
+	})
+	if err != nil || !token.Valid {
+		c.JSON(http.StatusUnauthorized, response.ErrorResponse{
+			Code:    "INVALID_REFRESH_TOKEN",
+			Message: "Неверный или просроченный refresh токен",
+		})
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		c.JSON(http.StatusUnauthorized, response.ErrorResponse{
+			Code:    "INVALID_REFRESH_TOKEN",
+			Message: "Неверный или просроченный refresh токен",
+		})
+		return
+	}
+
+	userIDFloat, ok := claims["user_id"].(float64)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, response.ErrorResponse{
+			Code:    "INVALID_REFRESH_TOKEN",
+			Message: "Неверный или просроченный refresh токен",
+		})
+		return
+	}
+
+	userID := uint(userIDFloat)
+
+	var user models.User
+	if err := db.DB.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, response.ErrorResponse{
+			Code:    "USER_NOT_FOUND",
+			Message: "Пользователь не найден",
+		})
+		return
+	}
+
+	newAccessToken, err := generateToken(user.ID, time.Minute*15, AccessSecret)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, response.ErrorResponse{
+			Code:    "TOKEN_GENERATION_ERROR",
+			Message: "Ошибка при генерации access токена",
+		})
+		return
+	}
+
+	newRefreshToken, err := generateToken(userID, time.Hour*24*7, refreshSecret)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, response.ErrorResponse{
+			Code:    "TOKEN_GENERATION_ERROR",
+			Message: "Ошибка при генерации нового refresh токена",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, response.TokenResponse{
+		AccessToken:  newAccessToken,
+		RefreshToken: newRefreshToken,
+	})
+}
