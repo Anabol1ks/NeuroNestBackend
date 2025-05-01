@@ -9,12 +9,14 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lib/pq"
 )
 
 // CreateNoteInput структура для создания заметки
 type CreateNoteInput struct {
-	Title   string `json:"title" binding:"required"`
-	Content string `json:"content" binding:"required"`
+	Title      string  `json:"title" binding:"required"`
+	Content    string  `json:"content" binding:"required"`
+	RelatedIDs []int64 `json:"related_ids,omitempty"`
 }
 
 // CreateNoteHandler godoc
@@ -42,6 +44,7 @@ func CreateNoteHandler(c *gin.Context) {
 		return
 	}
 
+	// 1) Сгенерировать embedding
 	embedding, err := service.GenerateEmbedding(input.Content)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{
@@ -51,8 +54,6 @@ func CreateNoteHandler(c *gin.Context) {
 		})
 		return
 	}
-
-	// Сохраняем эмбеддинг как []byte (json)
 	embeddingBytes, err := json.Marshal(embedding)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{
@@ -63,13 +64,16 @@ func CreateNoteHandler(c *gin.Context) {
 		return
 	}
 
+	// 2) Собираем модель Note, прокидываем RelatedIDs (можно не проверять на len)
 	note := models.Note{
-		UserID:    userID,
-		Title:     input.Title,
-		Content:   input.Content,
-		Embedding: embeddingBytes,
+		UserID:     userID,
+		Title:      input.Title,
+		Content:    input.Content,
+		Embedding:  embeddingBytes,
+		RelatedIDs: pq.Int64Array(input.RelatedIDs), // тут либо nil, либо []uint{…}
 	}
 
+	// 3) Сохраняем
 	if err := db.DB.Create(&note).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{
 			Message: "Ошибка при создании заметки",

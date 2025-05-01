@@ -3,20 +3,21 @@ package models
 import (
 	"time"
 
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
 type Note struct {
 	gorm.Model
-	UserID      uint         `gorm:"not null"`
-	Title       string       `gorm:"not null"`
-	Content     string       `gorm:"not null"`
-	Summary     string       // Суммаризация текста (можно генерировать на стороне AI)
-	Embedding   []byte       `gorm:"type:bytea"` // Векторное представление заметки
-	Attachments []Attachment // Вложения к заметке
-	IsArchived  bool         // Архивная заметка или нет
-	Tags        []Tag        `gorm:"many2many:note_tags;"` // Связь многие-ко-многим с тегами
-	RelatedIDs  []uint       `gorm:"type:integer[]"`       // Связанные заметки (ID других заметок)
+	UserID      uint          `gorm:"not null"`
+	Title       string        `gorm:"not null"`
+	Content     string        `gorm:"not null"`
+	Summary     string        // Суммаризация текста (можно генерировать на стороне AI)
+	Embedding   []byte        `gorm:"type:bytea"` // Векторное представление заметки
+	Attachments []Attachment  // Вложения к заметке
+	IsArchived  bool          // Архивная заметка или нет
+	Tags        []Tag         `gorm:"many2many:note_tags;"`        // Связь многие-ко-многим с тегами
+	RelatedIDs  pq.Int64Array `gorm:"type:integer[];default:'{}'"` // Связанные заметки (ID других заметок)
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

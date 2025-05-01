@@ -3,6 +3,10 @@ definitions:
     properties:
       content:
         type: string
+      related_ids:
+        items:
+          type: integer
+        type: array
       title:
         type: string
     required:

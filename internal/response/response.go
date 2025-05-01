@@ -41,7 +41,7 @@ type NoteResponse struct {
 	Attachments []AttachmentShort `json:"attachments,omitempty"`
 	IsArchived  bool              `json:"is_archived"`
 	Tags        []TagShort        `json:"tags,omitempty"`
-	RelatedIDs  []uint            `json:"related_ids,omitempty"`
+	RelatedIDs  []int64           `json:"related_ids,omitempty"`
 	CreatedAt   string            `json:"created_at"`
 	UpdatedAt   string            `json:"updated_at"`
 }

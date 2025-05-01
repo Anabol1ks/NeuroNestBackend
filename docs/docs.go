@@ -700,6 +700,12 @@ const docTemplate = `{
                 "content": {
                     "type": "string"
                 },
+                "related_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "title": {
                     "type": "string"
                 }
