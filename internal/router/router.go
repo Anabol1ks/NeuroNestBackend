@@ -41,5 +41,11 @@ func RouterConfig() *gin.Engine {
 		authGroup.POST("/login", handlers.LoginHandler)
 		authGroup.POST("/refresh", handlers.RefreshToken)
 	}
+
+	noteGroup := r.Group("/note", auth.AuthMiddleware())
+	{
+		noteGroup.POST("/create", handlers.CreateNoteHandler)
+		noteGroup.POST("/:id/summarize", handlers.SummarizeNoteByIDHandler)
+	}
 	return r
 }

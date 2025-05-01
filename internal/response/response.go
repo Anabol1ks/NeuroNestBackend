@@ -27,3 +27,7 @@ type UploadAvatarResponse struct {
 	Message    string `json:"message"`
 	ProfilePic string `json:"profile_pic"`
 }
+
+type SummarizeResponse struct {
+	Summary string `json:"summary"`
+}

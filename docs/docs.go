@@ -235,6 +235,106 @@ const docTemplate = `{
                 }
             }
         },
+        "/note/create": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Создаёт новую заметку пользователя с генерацией эмбеддинга",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "note"
+                ],
+                "summary": "Создать заметку",
+                "parameters": [
+                    {
+                        "description": "Данные заметки",
+                        "name": "note",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.CreateNoteInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Заметка успешно создана",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка валидации",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка генерации эмбеддинга EMBEDDING_ERROR   Ошибка сериализации эмбеддинга EMBEDDING_SERIALIZE_ERROR",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/note/{id}/summarize": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Генерирует краткое резюме для заметки пользователя по её ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "note"
+                ],
+                "summary": "Суммаризация заметки по ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID заметки",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Резюме успешно сгенерировано",
+                        "schema": {
+                            "$ref": "#/definitions/response.SummarizeResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Заметка не найдена NOTE_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка генерации резюме SUMMARY_ERROR",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/profile/delete-avatar": {
             "delete": {
                 "security": [
@@ -417,6 +517,24 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "handlers.CreateNoteInput": {
+            "type": "object",
+            "required": [
+                "content",
+                "title"
+            ],
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "topic_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "handlers.LoginInput": {
             "type": "object",
             "required": [
@@ -523,6 +641,14 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.SummarizeResponse": {
+            "type": "object",
+            "properties": {
+                "summary": {
                     "type": "string"
                 }
             }

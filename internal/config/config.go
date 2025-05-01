@@ -13,6 +13,8 @@ var (
 	YandexRedirectURL  string
 	UploadsPath        string
 	BaseURL            string
+	IAMtoken           string
+	CatalogID          string
 )
 
 func LoadEnv() {
@@ -24,4 +26,6 @@ func LoadEnv() {
 	YandexRedirectURL = os.Getenv("YANDEX_REDIRECT_URL")
 	UploadsPath = os.Getenv("UPLOADS_PATH")
 	BaseURL = os.Getenv("BASE_URL")
+	IAMtoken = os.Getenv("IAM_TOKEN")
+	CatalogID = os.Getenv("CATALOG_ID")
 }

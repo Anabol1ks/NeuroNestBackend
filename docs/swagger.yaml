@@ -1,4 +1,16 @@
 definitions:
+  handlers.CreateNoteInput:
+    properties:
+      content:
+        type: string
+      title:
+        type: string
+      topic_id:
+        type: integer
+    required:
+    - content
+    - title
+    type: object
   handlers.LoginInput:
     properties:
       email:
@@ -71,6 +83,11 @@ definitions:
   response.SuccessResponse:
     properties:
       message:
+        type: string
+    type: object
+  response.SummarizeResponse:
+    properties:
+      summary:
         type: string
     type: object
   response.TokenResponse:
@@ -240,6 +257,70 @@ paths:
       summary: Редирект на Yandex OAuth
       tags:
       - auth
+  /note/{id}/summarize:
+    post:
+      consumes:
+      - application/json
+      description: Генерирует краткое резюме для заметки пользователя по её ID
+      parameters:
+      - description: ID заметки
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Резюме успешно сгенерировано
+          schema:
+            $ref: '#/definitions/response.SummarizeResponse'
+        "404":
+          description: Заметка не найдена NOTE_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Ошибка генерации резюме SUMMARY_ERROR
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Суммаризация заметки по ID
+      tags:
+      - note
+  /note/create:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт новую заметку пользователя с генерацией эмбеддинга
+      parameters:
+      - description: Данные заметки
+        in: body
+        name: note
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateNoteInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Заметка успешно создана
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Ошибка генерации эмбеддинга EMBEDDING_ERROR   Ошибка сериализации
+            эмбеддинга EMBEDDING_SERIALIZE_ERROR
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Создать заметку
+      tags:
+      - note
   /profile/delete-avatar:
     delete:
       consumes:
