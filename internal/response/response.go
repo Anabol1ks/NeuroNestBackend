@@ -31,3 +31,34 @@ type UploadAvatarResponse struct {
 type SummarizeResponse struct {
 	Summary string `json:"summary"`
 }
+
+type NoteResponse struct {
+	ID          uint              `json:"id"`
+	Title       string            `json:"title"`
+	Content     string            `json:"content"`
+	Summary     string            `json:"summary,omitempty"`
+	TopicID     uint              `json:"topic_id,omitempty"`
+	Attachments []AttachmentShort `json:"attachments,omitempty"`
+	IsArchived  bool              `json:"is_archived"`
+	Tags        []TagShort        `json:"tags,omitempty"`
+	RelatedIDs  []uint            `json:"related_ids,omitempty"`
+	CreatedAt   string            `json:"created_at"`
+	UpdatedAt   string            `json:"updated_at"`
+}
+
+type AttachmentShort struct {
+	ID       uint   `json:"id"`
+	FileURL  string `json:"file_url"`
+	FileType string `json:"file_type"`
+	FileSize int64  `json:"file_size"`
+}
+
+type TagShort struct {
+	ID   uint   `json:"id"`
+	Name string `json:"name"`
+}
+
+type NotesListResponse struct {
+	Notes []NoteResponse `json:"notes"`
+	Total int            `json:"total"`
+}

@@ -235,7 +235,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/note/create": {
+        "/notes/create": {
             "post": {
                 "security": [
                     {
@@ -286,7 +286,180 @@ const docTemplate = `{
                 }
             }
         },
-        "/note/{id}/summarize": {
+        "/notes/list": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Выдаёт список всех заметок авторизованного пользователя",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "note"
+                ],
+                "summary": "Получения списка заметок",
+                "responses": {
+                    "200": {
+                        "description": "Список заметок",
+                        "schema": {
+                            "$ref": "#/definitions/response.NotesListResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка при получении заметок: DB_ERROR",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/notes/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение заметки пользователя по id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "note"
+                ],
+                "summary": "Получения заметки",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID заметки",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Заметка успешно получена",
+                        "schema": {
+                            "$ref": "#/definitions/response.NoteResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Заметка не найдена NOTE_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Удаляет заметку пользователя по id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "note"
+                ],
+                "summary": "Удаление заметки",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID заметки",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Заметка успешно удалена",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Заметка не найдена NOTE_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка при удалении заметки DB_ERROR",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/notes/{id}/archive": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Переносит заметку пользователя в архив (IsArchived = true)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "note"
+                ],
+                "summary": "Архивировать заметку",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID заметки",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Заметка архивирована",
+                        "schema": {
+                            "$ref": "#/definitions/response.SuccessResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Заметка не найдена NOTE_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка при архивировании заметки DB_ERROR",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/notes/{id}/summarize": {
             "post": {
                 "security": [
                     {
@@ -327,7 +500,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Ошибка генерации резюме SUMMARY_ERROR",
+                        "description": "Ошибка генерации резюме SUMMARY_ERROR, Ошибка сохранения резюме SUMMARY_SAVE_ERROR",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorResponse"
                         }
@@ -529,9 +702,6 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
-                },
-                "topic_id": {
-                    "type": "integer"
                 }
             }
         },
@@ -602,6 +772,23 @@ const docTemplate = `{
                 }
             }
         },
+        "response.AttachmentShort": {
+            "type": "object",
+            "properties": {
+                "file_size": {
+                    "type": "integer"
+                },
+                "file_type": {
+                    "type": "string"
+                },
+                "file_url": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
         "response.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -613,6 +800,67 @@ const docTemplate = `{
                 },
                 "message": {
                     "type": "string"
+                }
+            }
+        },
+        "response.NoteResponse": {
+            "type": "object",
+            "properties": {
+                "attachments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.AttachmentShort"
+                    }
+                },
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_archived": {
+                    "type": "boolean"
+                },
+                "related_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.TagShort"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                },
+                "topic_id": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.NotesListResponse": {
+            "type": "object",
+            "properties": {
+                "notes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.NoteResponse"
+                    }
+                },
+                "total": {
+                    "type": "integer"
                 }
             }
         },
@@ -649,6 +897,17 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "summary": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.TagShort": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
                     "type": "string"
                 }
             }

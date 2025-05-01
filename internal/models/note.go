@@ -13,7 +13,6 @@ type Note struct {
 	Content     string       `gorm:"not null"`
 	Summary     string       // Суммаризация текста (можно генерировать на стороне AI)
 	Embedding   []byte       `gorm:"type:bytea"` // Векторное представление заметки
-	TopicID     uint         // Идентификатор темы (если нужно)
 	Attachments []Attachment // Вложения к заметке
 	IsArchived  bool         // Архивная заметка или нет
 	Tags        []Tag        `gorm:"many2many:note_tags;"` // Связь многие-ко-многим с тегами

@@ -5,8 +5,6 @@ definitions:
         type: string
       title:
         type: string
-      topic_id:
-        type: integer
     required:
     - content
     - title
@@ -57,6 +55,17 @@ definitions:
       profile_pic:
         type: string
     type: object
+  response.AttachmentShort:
+    properties:
+      file_size:
+        type: integer
+      file_type:
+        type: string
+      file_url:
+        type: string
+      id:
+        type: integer
+    type: object
   response.ErrorResponse:
     properties:
       code:
@@ -65,6 +74,46 @@ definitions:
         type: string
       message:
         type: string
+    type: object
+  response.NoteResponse:
+    properties:
+      attachments:
+        items:
+          $ref: '#/definitions/response.AttachmentShort'
+        type: array
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      is_archived:
+        type: boolean
+      related_ids:
+        items:
+          type: integer
+        type: array
+      summary:
+        type: string
+      tags:
+        items:
+          $ref: '#/definitions/response.TagShort'
+        type: array
+      title:
+        type: string
+      topic_id:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  response.NotesListResponse:
+    properties:
+      notes:
+        items:
+          $ref: '#/definitions/response.NoteResponse'
+        type: array
+      total:
+        type: integer
     type: object
   response.ProfileResponse:
     properties:
@@ -88,6 +137,13 @@ definitions:
   response.SummarizeResponse:
     properties:
       summary:
+        type: string
+    type: object
+  response.TagShort:
+    properties:
+      id:
+        type: integer
+      name:
         type: string
     type: object
   response.TokenResponse:
@@ -257,7 +313,95 @@ paths:
       summary: Редирект на Yandex OAuth
       tags:
       - auth
-  /note/{id}/summarize:
+  /notes/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет заметку пользователя по id
+      parameters:
+      - description: ID заметки
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заметка успешно удалена
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "404":
+          description: Заметка не найдена NOTE_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Ошибка при удалении заметки DB_ERROR
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Удаление заметки
+      tags:
+      - note
+    get:
+      consumes:
+      - application/json
+      description: Получение заметки пользователя по id
+      parameters:
+      - description: ID заметки
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заметка успешно получена
+          schema:
+            $ref: '#/definitions/response.NoteResponse'
+        "404":
+          description: Заметка не найдена NOTE_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Получения заметки
+      tags:
+      - note
+  /notes/{id}/archive:
+    patch:
+      consumes:
+      - application/json
+      description: Переносит заметку пользователя в архив (IsArchived = true)
+      parameters:
+      - description: ID заметки
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заметка архивирована
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "404":
+          description: Заметка не найдена NOTE_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Ошибка при архивировании заметки DB_ERROR
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Архивировать заметку
+      tags:
+      - note
+  /notes/{id}/summarize:
     post:
       consumes:
       - application/json
@@ -280,7 +424,8 @@ paths:
           schema:
             $ref: '#/definitions/response.ErrorResponse'
         "500":
-          description: Ошибка генерации резюме SUMMARY_ERROR
+          description: Ошибка генерации резюме SUMMARY_ERROR, Ошибка сохранения резюме
+            SUMMARY_SAVE_ERROR
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       security:
@@ -288,7 +433,7 @@ paths:
       summary: Суммаризация заметки по ID
       tags:
       - note
-  /note/create:
+  /notes/create:
     post:
       consumes:
       - application/json
@@ -319,6 +464,27 @@ paths:
       security:
       - BearerAuth: []
       summary: Создать заметку
+      tags:
+      - note
+  /notes/list:
+    get:
+      consumes:
+      - application/json
+      description: Выдаёт список всех заметок авторизованного пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список заметок
+          schema:
+            $ref: '#/definitions/response.NotesListResponse'
+        "500":
+          description: 'Ошибка при получении заметок: DB_ERROR'
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Получения списка заметок
       tags:
       - note
   /profile/delete-avatar:
