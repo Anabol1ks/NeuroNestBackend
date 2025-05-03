@@ -86,23 +86,7 @@ func CreateNoteHandler(c *gin.Context) {
 		RelatedIDs: pq.Int64Array(input.RelatedIDs),
 	}
 
-	// 4) Если указаны теги — подгружаем их из БД и связываем
-	if len(input.TagIDs) > 0 {
-		var tags []models.Tag
-		if err := db.DB.
-			Where("id IN ? AND user_id = ?", input.TagIDs, userID).
-			Find(&tags).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, response.ErrorResponse{
-				Message: "Ошибка при загрузке тегов",
-				Code:    "DB_ERROR",
-				Details: err.Error(),
-			})
-			return
-		}
-		note.Tags = tags
-	}
-
-	// 5) Сохраняем заметку, чтобы получить note.ID
+	// 4) Сохраняем заметку, чтобы получить note.ID (без тегов)
 	if err := db.DB.Create(&note).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{
 			Message: "Ошибка при создании заметки",
@@ -110,6 +94,21 @@ func CreateNoteHandler(c *gin.Context) {
 			Details: err.Error(),
 		})
 		return
+	}
+
+	// 5) Если указаны теги — подгружаем их из БД и связываем
+	if len(input.TagIDs) > 0 {
+		// Создаем записи в промежуточной таблице note_tags
+		for _, tagID := range input.TagIDs {
+			if err := db.DB.Exec("INSERT INTO note_tags (note_id, tag_id) VALUES (?, ?)", note.ID, tagID).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, response.ErrorResponse{
+					Message: "Ошибка при связывании заметки с тегами",
+					Code:    "DB_ERROR",
+					Details: err.Error(),
+				})
+				return
+			}
+		}
 	}
 
 	// 6) Обработка файлов attachments (поле formData file, multi)
