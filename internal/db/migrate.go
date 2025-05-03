@@ -11,7 +11,6 @@ func AutoMigrateTables() {
 		&models.User{},
 		&models.Note{},
 		&models.Tag{},
-		&models.Topic{},
 		&models.Attachment{},
 		&models.ChatHistory{},
 		&models.ActivityLog{},

@@ -1,41 +1,54 @@
 package handlers
 
 import (
+	"NeuroNest/internal/config"
 	"NeuroNest/internal/db"
 	"NeuroNest/internal/models"
 	"NeuroNest/internal/response"
 	"NeuroNest/internal/service"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
 
-// CreateNoteInput структура для создания заметки
+// CreateNoteInput структура для создания заметки (multipart/form-data)
 type CreateNoteInput struct {
-	Title      string  `json:"title" binding:"required"`
-	Content    string  `json:"content" binding:"required"`
-	RelatedIDs []int64 `json:"related_ids,omitempty"`
+	Title      string  `form:"title" binding:"required"`
+	Content    string  `form:"content" binding:"required"`
+	RelatedIDs []int64 `form:"related_ids[]"` // optional, IDs связанных заметок
+	TagIDs     []uint  `form:"tag_ids[]"`     // optional, IDs тегов
 }
 
 // CreateNoteHandler godoc
 // @Security		BearerAuth
 // @Summary		Создать заметку
-// @Description	Создаёт новую заметку пользователя с генерацией эмбеддинга
+// @Description	Создаёт новую заметку пользователя с генерацией эмбеддинга, тегами и вложениями
 // @Tags			note
-// @Accept			json
+// @Accept			multipart/form-data
 // @Produce		json
-// @Param			note	body		CreateNoteInput	true	"Данные заметки"
-// @Success		201		{object}	response.SuccessResponse	"Заметка успешно создана"
-// @Failure		400		{object}	response.ErrorResponse	"Ошибка валидации"
-// @Failure		500		{object}	response.ErrorResponse	"Ошибка генерации эмбеддинга EMBEDDING_ERROR   Ошибка сериализации эмбеддинга EMBEDDING_SERIALIZE_ERROR"
+// @Param			title			formData	string	true	"Заголовок"
+// @Param			content			formData	string	true	"Содержимое"
+// @Param			related_ids		formData	[]int	false	"ID связанных заметок"
+// @Param			tag_ids			formData	[]int	false	"ID тегов"
+// @Param			attachments	formData	[]file	false	"Вложения (image, audio, pdf)"
+// @Success		201	{object}	response.SuccessResponse	"Заметка успешно создана"
+// @Failure		400	{object}	response.ErrorResponse	"Ошибка валидации"
+// @Failure		500	{object}	response.ErrorResponse	"Ошибка сервера"
 // @Router			/notes/create [post]
 func CreateNoteHandler(c *gin.Context) {
 	userID := c.GetUint("userID")
 
+	// 1) Биндим поля формы
 	var input CreateNoteInput
-	if err := c.ShouldBindJSON(&input); err != nil {
+	if err := c.ShouldBind(&input); err != nil {
 		c.JSON(http.StatusBadRequest, response.ErrorResponse{
 			Message: "Ошибка валидации данных",
 			Code:    "VALIDATION_ERROR",
@@ -44,7 +57,7 @@ func CreateNoteHandler(c *gin.Context) {
 		return
 	}
 
-	// 1) Сгенерировать embedding
+	// 2) Генерация embedding
 	embedding, err := service.GenerateEmbedding(input.Content)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{
@@ -54,7 +67,7 @@ func CreateNoteHandler(c *gin.Context) {
 		})
 		return
 	}
-	embeddingBytes, err := json.Marshal(embedding)
+	embBytes, err := json.Marshal(embedding)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{
 			Message: "Ошибка сериализации эмбеддинга",
@@ -64,16 +77,32 @@ func CreateNoteHandler(c *gin.Context) {
 		return
 	}
 
-	// 2) Собираем модель Note, прокидываем RelatedIDs (можно не проверять на len)
+	// 3) Подготовка модели заметки
 	note := models.Note{
 		UserID:     userID,
 		Title:      input.Title,
 		Content:    input.Content,
-		Embedding:  embeddingBytes,
-		RelatedIDs: pq.Int64Array(input.RelatedIDs), // тут либо nil, либо []uint{…}
+		Embedding:  embBytes,
+		RelatedIDs: pq.Int64Array(input.RelatedIDs),
 	}
 
-	// 3) Сохраняем
+	// 4) Если указаны теги — подгружаем их из БД и связываем
+	if len(input.TagIDs) > 0 {
+		var tags []models.Tag
+		if err := db.DB.
+			Where("id IN ? AND user_id = ?", input.TagIDs, userID).
+			Find(&tags).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, response.ErrorResponse{
+				Message: "Ошибка при загрузке тегов",
+				Code:    "DB_ERROR",
+				Details: err.Error(),
+			})
+			return
+		}
+		note.Tags = tags
+	}
+
+	// 5) Сохраняем заметку, чтобы получить note.ID
 	if err := db.DB.Create(&note).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{
 			Message: "Ошибка при создании заметки",
@@ -83,6 +112,46 @@ func CreateNoteHandler(c *gin.Context) {
 		return
 	}
 
+	// 6) Обработка файлов attachments (поле formData file, multi)
+	form, err := c.MultipartForm()
+	if err == nil && form.File["attachments"] != nil {
+		for _, fh := range form.File["attachments"] {
+			ext := strings.ToLower(filepath.Ext(fh.Filename))
+			var fType string
+			switch ext {
+			case ".png", ".jpg", ".jpeg", ".gif":
+				fType = "image"
+			case ".mp3", ".wav", ".ogg":
+				fType = "audio"
+			case ".pdf":
+				fType = "pdf"
+			default:
+				// пропускаем неподдерживаемый формат
+				continue
+			}
+
+			// генерируем уникальное имя
+			newName := fmt.Sprintf("%d_%s%s", userID, uuid.New().String(), ext)
+			dst := filepath.Join(config.UploadsPath+"/attachments", newName)
+			if err := c.SaveUploadedFile(fh, dst); err != nil {
+				// просто логируем и продолжаем
+				fmt.Printf("file save error: %v\n", err)
+				continue
+			}
+
+			url := fmt.Sprintf("%s/attachments/%s", config.BaseURL, newName)
+			att := models.Attachment{
+				NoteID:     note.ID,
+				FileURL:    url,
+				FileType:   fType,
+				FileSize:   fh.Size,
+				UploadedAt: time.Now(),
+			}
+			db.DB.Create(&att)
+		}
+	}
+
+	// 7) Ответ
 	c.JSON(http.StatusCreated, response.SuccessResponse{
 		Message: "Заметка успешно создана",
 	})
@@ -150,7 +219,7 @@ func GetNotesHandler(c *gin.Context) {
 	userID := c.GetUint("userID")
 
 	var notes []models.Note
-	if err := db.DB.Where("user_id = ?", userID).Find(&notes).Error; err != nil {
+	if err := db.DB.Where("user_id = ?", userID).Preload("Tags").Preload("Attachments").Find(&notes).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{
 			Message: "Ошибка при получении заметок",
 			Code:    "DB_ERROR",
@@ -215,7 +284,7 @@ func GetNoteHandler(c *gin.Context) {
 	userID := c.GetUint("userID")
 
 	var note models.Note
-	if err := db.DB.Where("id = ? AND user_id = ?", noteID, userID).First(&note).Error; err != nil {
+	if err := db.DB.Where("id = ? AND user_id = ?", noteID, userID).Preload("Tags").Preload("Attachments").First(&note).Error; err != nil {
 		c.JSON(http.StatusNotFound, response.ErrorResponse{
 			Message: "Заметка не найдена",
 			Code:    "NOTE_NOT_FOUND",
@@ -223,15 +292,35 @@ func GetNoteHandler(c *gin.Context) {
 		return
 	}
 
+	var attachments []response.AttachmentShort
+	for _, att := range note.Attachments {
+		attachments = append(attachments, response.AttachmentShort{
+			ID:       att.ID,
+			FileURL:  att.FileURL,
+			FileType: att.FileType,
+			FileSize: att.FileSize,
+		})
+	}
+
+	var tags []response.TagShort
+	for _, tag := range note.Tags {
+		tags = append(tags, response.TagShort{
+			ID:   tag.ID,
+			Name: tag.Name,
+		})
+	}
+
 	c.JSON(http.StatusOK, response.NoteResponse{
-		ID:         note.ID,
-		Title:      note.Title,
-		Content:    note.Content,
-		Summary:    note.Summary,
-		IsArchived: note.IsArchived,
-		RelatedIDs: note.RelatedIDs,
-		CreatedAt:  note.CreatedAt.Format("2006-01-02"),
-		UpdatedAt:  note.UpdatedAt.Format("2006-01-02"),
+		ID:          note.ID,
+		Title:       note.Title,
+		Content:     note.Content,
+		Summary:     note.Summary,
+		IsArchived:  note.IsArchived,
+		Tags:        tags,
+		Attachments: attachments,
+		RelatedIDs:  note.RelatedIDs,
+		CreatedAt:   note.CreatedAt.Format("2006-01-02"),
+		UpdatedAt:   note.UpdatedAt.Format("2006-01-02"),
 	})
 }
 
@@ -284,7 +373,7 @@ func ArchiveNoteHandler(c *gin.Context) {
 // DeleteNoteHandler godoc
 // @Security		BearerAuth
 // @Summary		Удаление заметки
-// @Description	Удаляет заметку пользователя по id
+// @Description	Удаляет заметку пользователя по id и все связанные вложения
 // @Tags note
 // @Accept json
 // @Produce json
@@ -298,7 +387,7 @@ func DeleteNoteHandler(c *gin.Context) {
 	userID := c.GetUint("userID")
 
 	var note models.Note
-	if err := db.DB.Where("id = ? AND user_id = ?", noteID, userID).First(&note).Error; err != nil {
+	if err := db.DB.Where("id = ? AND user_id = ?", noteID, userID).Preload("Attachments").First(&note).Error; err != nil {
 		c.JSON(http.StatusNotFound, response.ErrorResponse{
 			Message: "Заметка не найдена",
 			Code:    "NOTE_NOT_FOUND",
@@ -306,6 +395,20 @@ func DeleteNoteHandler(c *gin.Context) {
 		return
 	}
 
+	for _, attachment := range note.Attachments {
+		// Извлекаем имя файла из URL
+		fileURL := attachment.FileURL
+		fileName := filepath.Base(fileURL)
+
+		filePath := filepath.Join(config.UploadsPath, "attachments", fileName)
+
+		if err := os.Remove(filePath); err != nil {
+			// Логируем ошибку, но продолжаем выполнение
+			fmt.Printf("Error deleting file %s: %v\n", filePath, err)
+		}
+	}
+
+	// Удаляем заметку (вложения удалятся каскадно, если настроены foreign keys)
 	if err := db.DB.Delete(&note).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{
 			Message: "Ошибка при удалении заметки",
@@ -316,6 +419,6 @@ func DeleteNoteHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response.SuccessResponse{
-		Message: "Заметка успешно удалена",
+		Message: "Заметка и все вложения успешно удалены",
 	})
 }

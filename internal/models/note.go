@@ -22,14 +22,9 @@ type Note struct {
 	UpdatedAt   time.Time
 }
 
-type Topic struct {
-	gorm.Model
-	Name        string `gorm:"unique;not null"`
-	Description string
-}
-
 type Tag struct {
 	gorm.Model
+	UserID      uint   `gorm:"not null;index"`
 	Name        string `gorm:"unique;not null"`
 	Description string
 	Notes       []Note `gorm:"many2many:note_tags;"` // Обратная связь с заметками

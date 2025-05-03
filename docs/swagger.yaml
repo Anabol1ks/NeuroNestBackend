@@ -1,18 +1,4 @@
 definitions:
-  handlers.CreateNoteInput:
-    properties:
-      content:
-        type: string
-      related_ids:
-        items:
-          type: integer
-        type: array
-      title:
-        type: string
-    required:
-    - content
-    - title
-    type: object
   handlers.LoginInput:
     properties:
       email:
@@ -321,7 +307,7 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Удаляет заметку пользователя по id
+      description: Удаляет заметку пользователя по id и все связанные вложения
       parameters:
       - description: ID заметки
         in: path
@@ -440,15 +426,41 @@ paths:
   /notes/create:
     post:
       consumes:
-      - application/json
-      description: Создаёт новую заметку пользователя с генерацией эмбеддинга
+      - multipart/form-data
+      description: Создаёт новую заметку пользователя с генерацией эмбеддинга, тегами
+        и вложениями
       parameters:
-      - description: Данные заметки
-        in: body
-        name: note
+      - description: Заголовок
+        in: formData
+        name: title
         required: true
-        schema:
-          $ref: '#/definitions/handlers.CreateNoteInput'
+        type: string
+      - description: Содержимое
+        in: formData
+        name: content
+        required: true
+        type: string
+      - collectionFormat: csv
+        description: ID связанных заметок
+        in: formData
+        items:
+          type: integer
+        name: related_ids
+        type: array
+      - collectionFormat: csv
+        description: ID тегов
+        in: formData
+        items:
+          type: integer
+        name: tag_ids
+        type: array
+      - collectionFormat: csv
+        description: Вложения (image, audio, pdf)
+        in: formData
+        items:
+          type: file
+        name: attachments
+        type: array
       produces:
       - application/json
       responses:
@@ -461,8 +473,7 @@ paths:
           schema:
             $ref: '#/definitions/response.ErrorResponse'
         "500":
-          description: Ошибка генерации эмбеддинга EMBEDDING_ERROR   Ошибка сериализации
-            эмбеддинга EMBEDDING_SERIALIZE_ERROR
+          description: Ошибка сервера
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       security:

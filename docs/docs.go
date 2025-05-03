@@ -242,9 +242,9 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Создаёт новую заметку пользователя с генерацией эмбеддинга",
+                "description": "Создаёт новую заметку пользователя с генерацией эмбеддинга, тегами и вложениями",
                 "consumes": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
@@ -255,13 +255,48 @@ const docTemplate = `{
                 "summary": "Создать заметку",
                 "parameters": [
                     {
-                        "description": "Данные заметки",
-                        "name": "note",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handlers.CreateNoteInput"
-                        }
+                        "type": "string",
+                        "description": "Заголовок",
+                        "name": "title",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Содержимое",
+                        "name": "content",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "ID связанных заметок",
+                        "name": "related_ids",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "ID тегов",
+                        "name": "tag_ids",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "file"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Вложения (image, audio, pdf)",
+                        "name": "attachments",
+                        "in": "formData"
                     }
                 ],
                 "responses": {
@@ -278,7 +313,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Ошибка генерации эмбеддинга EMBEDDING_ERROR   Ошибка сериализации эмбеддинга EMBEDDING_SERIALIZE_ERROR",
+                        "description": "Ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorResponse"
                         }
@@ -368,7 +403,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Удаляет заметку пользователя по id",
+                "description": "Удаляет заметку пользователя по id и все связанные вложения",
                 "consumes": [
                     "application/json"
                 ],
@@ -690,27 +725,6 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "handlers.CreateNoteInput": {
-            "type": "object",
-            "required": [
-                "content",
-                "title"
-            ],
-            "properties": {
-                "content": {
-                    "type": "string"
-                },
-                "related_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "title": {
-                    "type": "string"
-                }
-            }
-        },
         "handlers.LoginInput": {
             "type": "object",
             "required": [
