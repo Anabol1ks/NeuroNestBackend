@@ -21,7 +21,9 @@ func RouterConfig() *gin.Engine {
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
-	r.Static("/avatars", config.UploadsPath)
+
+	r.Static("/avatars", config.UploadsPath+"/avatars")
+	r.Static("/attachments", config.UploadsPath+"/attachments")
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -50,6 +52,13 @@ func RouterConfig() *gin.Engine {
 		noteGroup.DELETE("/:id", handlers.DeleteNoteHandler)
 		noteGroup.POST("/:id/summarize", handlers.SummarizeNoteByIDHandler)
 		noteGroup.PATCH("/:id/archive", handlers.ArchiveNoteHandler)
+	}
+
+	tagGroup := r.Group("/tags", auth.AuthMiddleware())
+	{
+		tagGroup.POST("/create", handlers.CreateTagsHandler)
+		tagGroup.GET("/list", handlers.GetTagsHandler)
+		tagGroup.DELETE("/:id", handlers.DeleteTagHandler)
 	}
 	return r
 }

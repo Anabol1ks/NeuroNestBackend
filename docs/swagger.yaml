@@ -34,6 +34,15 @@ definitions:
     - nickname
     - password
     type: object
+  handlers.TagInput:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
   handlers.UpdateProfileInput:
     properties:
       first_name:
@@ -129,12 +138,30 @@ definitions:
       summary:
         type: string
     type: object
+  response.TagResponse:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
   response.TagShort:
     properties:
       id:
         type: integer
       name:
         type: string
+    type: object
+  response.TagsListResponse:
+    properties:
+      tags:
+        items:
+          $ref: '#/definitions/response.TagResponse'
+        type: array
+      total:
+        type: integer
     type: object
   response.TokenResponse:
     properties:
@@ -619,6 +646,92 @@ paths:
       summary: Загрузка аватарки пользователя
       tags:
       - profile
+  /tags/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет тег пользователя по id
+      parameters:
+      - description: ID тега
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Тег успешно удалён
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "404":
+          description: Тег не найден TAG_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Ошибка при удалении тега DB_ERROR
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Удаление тега
+      tags:
+      - tag
+  /tags/create:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт новый тег
+      parameters:
+      - description: Данные заметки
+        in: body
+        name: tag
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.TagInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Тег успешно создан
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Ошибка при создании тега
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Создать тег
+      tags:
+      - tag
+  /tags/list:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список тегов пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список тегов пользователя
+          schema:
+            items:
+              $ref: '#/definitions/response.TagsListResponse'
+            type: array
+        "500":
+          description: Ошибка при получении тегов
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Получить теги
+      tags:
+      - tag
 securityDefinitions:
   BearerAuth:
     in: header

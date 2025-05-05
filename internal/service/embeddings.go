@@ -15,7 +15,7 @@ func GenerateEmbedding(text string) ([]float64, error) {
 	// 5. Делаем запрос на embedding :contentReference[oaicite:4]{index=4}
 	req := yandexgpt.YandexGPTEmbeddingsRequest{
 		ModelURI: modelURI,
-		Text:     "test",
+		Text:     text,
 	}
 	resp, err := client.GetEmbedding(ctx, req)
 	if err != nil {

@@ -58,6 +58,17 @@ type TagShort struct {
 	Name string `json:"name"`
 }
 
+type TagResponse struct {
+	ID          uint   `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+type TagsListResponse struct {
+	Tags  []TagResponse `json:"tags"`
+	Total int           `json:"total"`
+}
+
 type NotesListResponse struct {
 	Notes []NoteResponse `json:"notes"`
 	Total int            `json:"total"`

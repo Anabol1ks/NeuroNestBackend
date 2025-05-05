@@ -169,7 +169,7 @@ func UploadAvatarHandler(c *gin.Context) {
 	// Сохраняем файл через сервис
 	avatarSvc := storage.NewLocalAvatarService(
 		config.UploadsPath+"/avatars",
-		config.BaseURL+"/avatars",
+		"/avatars",
 	)
 
 	if user.ProfilePic != "" {
@@ -241,7 +241,7 @@ func DeleteAvatarHandler(c *gin.Context) {
 	// Удаляем файл аватарки
 	avatarSvc := storage.NewLocalAvatarService(
 		config.UploadsPath+"/avatars",
-		config.BaseURL+"/avatars",
+		"/avatars",
 	)
 	filename := filepath.Base(user.ProfilePic)
 	if err := avatarSvc.Delete(filename); err != nil {

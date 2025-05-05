@@ -138,7 +138,7 @@ func CreateNoteHandler(c *gin.Context) {
 				continue
 			}
 
-			url := fmt.Sprintf("%s/attachments/%s", config.BaseURL, newName)
+			url := fmt.Sprintf("/attachments/%s", newName)
 			att := models.Attachment{
 				NoteID:     note.ID,
 				FileURL:    url,
@@ -385,8 +385,16 @@ func DeleteNoteHandler(c *gin.Context) {
 	noteID := c.Param("id")
 	userID := c.GetUint("userID")
 
+	// Начинаем транзакцию для обеспечения целостности данных
+	tx := db.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
 	var note models.Note
-	if err := db.DB.Where("id = ? AND user_id = ?", noteID, userID).Preload("Attachments").First(&note).Error; err != nil {
+	if err := tx.Where("id = ? AND user_id = ?", noteID, userID).Preload("Attachments").First(&note).Error; err != nil {
 		c.JSON(http.StatusNotFound, response.ErrorResponse{
 			Message: "Заметка не найдена",
 			Code:    "NOTE_NOT_FOUND",
@@ -394,6 +402,18 @@ func DeleteNoteHandler(c *gin.Context) {
 		return
 	}
 
+	// 1. Удаляем связи между заметкой и тегами в промежуточной таблице
+	if err := tx.Exec("DELETE FROM note_tags WHERE note_id = ?", note.ID).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, response.ErrorResponse{
+			Message: "Ошибка при удалении связей с тегами",
+			Code:    "DB_ERROR",
+			Details: err.Error(),
+		})
+		return
+	}
+
+	// 2. Удаляем физические файлы вложений
 	for _, attachment := range note.Attachments {
 		// Извлекаем имя файла из URL
 		fileURL := attachment.FileURL
@@ -407,8 +427,20 @@ func DeleteNoteHandler(c *gin.Context) {
 		}
 	}
 
-	// Удаляем заметку (вложения удалятся каскадно, если настроены foreign keys)
-	if err := db.DB.Delete(&note).Error; err != nil {
+	// 3. Удаляем вложения из базы данных
+	if err := tx.Where("note_id = ?", note.ID).Delete(&models.Attachment{}).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, response.ErrorResponse{
+			Message: "Ошибка при удалении вложений",
+			Code:    "DB_ERROR",
+			Details: err.Error(),
+		})
+		return
+	}
+
+	// 4. Удаляем саму заметку
+	if err := tx.Delete(&note).Error; err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{
 			Message: "Ошибка при удалении заметки",
 			Code:    "DB_ERROR",
@@ -417,7 +449,17 @@ func DeleteNoteHandler(c *gin.Context) {
 		return
 	}
 
+	// Фиксируем транзакцию
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusInternalServerError, response.ErrorResponse{
+			Message: "Ошибка при фиксации транзакции",
+			Code:    "DB_ERROR",
+			Details: err.Error(),
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, response.SuccessResponse{
-		Message: "Заметка и все вложения успешно удалены",
+		Message: "Заметка и все связанные данные успешно удалены",
 	})
 }
