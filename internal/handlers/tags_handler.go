@@ -94,6 +94,39 @@ func GetTagsHandler(c *gin.Context) {
 	})
 }
 
+// GetTagHandler godoc
+// @Security		BearerAuth
+// @Summary		Получение тега
+// @Description	Получает тег пользователя по id
+// @Tags tag
+// @Accept json
+// @Produce json
+// @Param			id	path		uint	true	"ID тега"
+// @Success 200 {object} response.TagResponse "Полученный тег"
+// @Failure 404 {object} response.ErrorResponse "Тег не найден TAG_NOT_FOUND"
+// @Router	/tags/{id} [get]
+func GetTagHandler(c *gin.Context) {
+	userID := c.GetUint("userID")
+	tagID := c.Param("id")
+
+	var tag models.Tag
+	if err := db.DB.Where("id = ? AND user_id = ?", tagID, userID).First(&tag).Error; err != nil {
+		c.JSON(http.StatusNotFound, response.ErrorResponse{
+			Message: "Тег не найден",
+			Code:    "TAG_NOT_FOUND",
+		})
+		return
+	}
+
+	tagResp := response.TagResponse{
+		ID:          tag.ID,
+		Name:        tag.Name,
+		Description: tag.Description,
+	}
+
+	c.JSON(http.StatusOK, tagResp)
+}
+
 // DeleteTagHandler godoc
 // @Security		BearerAuth
 // @Summary		Удаление тега
@@ -118,7 +151,6 @@ func DeleteTagHandler(c *gin.Context) {
 		}
 	}()
 
-	// Проверяем существование тега
 	var tag models.Tag
 	if err := tx.Where("id = ? AND user_id = ?", tagID, userID).First(&tag).Error; err != nil {
 		tx.Rollback()
@@ -130,7 +162,6 @@ func DeleteTagHandler(c *gin.Context) {
 		return
 	}
 
-	// Удаляем связи тега с заметками
 	if err := tx.Exec("DELETE FROM note_tags WHERE tag_id = ?", tagID).Error; err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{
@@ -141,7 +172,6 @@ func DeleteTagHandler(c *gin.Context) {
 		return
 	}
 
-	// Удаляем сам тег
 	if err := tx.Delete(&tag).Error; err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{
@@ -152,7 +182,6 @@ func DeleteTagHandler(c *gin.Context) {
 		return
 	}
 
-	// Фиксируем транзакцию
 	if err := tx.Commit().Error; err != nil {
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{
 			Message: "Ошибка при фиксации транзакции",

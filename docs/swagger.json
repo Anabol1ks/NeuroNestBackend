@@ -802,6 +802,47 @@
             }
         },
         "/tags/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получает тег пользователя по id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tag"
+                ],
+                "summary": "Получение тега",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID тега",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Полученный тег",
+                        "schema": {
+                            "$ref": "#/definitions/response.TagResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Тег не найден TAG_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {

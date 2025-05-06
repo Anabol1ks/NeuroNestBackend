@@ -58,6 +58,7 @@ func RouterConfig() *gin.Engine {
 	{
 		tagGroup.POST("/create", handlers.CreateTagsHandler)
 		tagGroup.GET("/list", handlers.GetTagsHandler)
+		tagGroup.GET("/:id", handlers.GetTagHandler)
 		tagGroup.DELETE("/:id", handlers.DeleteTagHandler)
 	}
 	return r

@@ -677,6 +677,32 @@ paths:
       summary: Удаление тега
       tags:
       - tag
+    get:
+      consumes:
+      - application/json
+      description: Получает тег пользователя по id
+      parameters:
+      - description: ID тега
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Полученный тег
+          schema:
+            $ref: '#/definitions/response.TagResponse'
+        "404":
+          description: Тег не найден TAG_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Получение тега
+      tags:
+      - tag
   /tags/create:
     post:
       consumes:
